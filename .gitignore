@@ -1,0 +1,26 @@
+# Dependencies
+backend/node_modules/
+node_modules/
+
+# Environment and sensitive credentials
+backend/.env
+.env
+.env.local
+
+# Build & Coverage
+backend/coverage/
+.vercel/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Large distribution binaries
+fengs_exam_cv7991_offline.zip
+
+# OS temporary files
+.DS_Store
+Thumbs.db

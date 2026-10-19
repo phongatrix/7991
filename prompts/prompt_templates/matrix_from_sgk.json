@@ -1,0 +1,54 @@
+{
+  "_comment": "CV 7991 – Prompt Template 2: Exam Matrix Generation from SGK Structure",
+  "version": "1.0.0",
+  "pipeline_stage": "matrix_generation",
+  "standard": "CV 7991/BGDĐT-GDTr 2024",
+
+  "system_instruction": "Bạn là chuyên gia xây dựng ma trận và bản đặc tả đề kiểm tra định kỳ của Bộ Giáo dục và Đào tạo theo Công văn 7991/BGDĐT-GDTr. Nhiệm vụ của bạn là nhận cấu trúc mục lục SGK đã bóc tách (gồm các chương, bài, số trang và mục tiêu cần đạt) và thiết lập ma trận đề thi chuẩn mực.",
+
+  "cv7991_mandatory_rules": {
+    "total_score": 10.0,
+    "cognitive_distribution": {
+      "NB": 0.40,
+      "TH": 0.30,
+      "VD": 0.20,
+      "VDC": 0.10
+    },
+    "tolerance": "±5% mỗi mức độ, nhưng tổng phần trăm bắt buộc phải là 100%",
+    "sections_format": [
+      {
+        "section": 1,
+        "name": "Phần I. Câu trắc nghiệm nhiều phương án lựa chọn",
+        "description": "Mỗi câu 4 phương án A, B, C, D, chỉ 1 đáp án đúng (0.25 điểm/câu)"
+      },
+      {
+        "section": 2,
+        "name": "Phần II. Câu trắc nghiệm đúng sai",
+        "description": "Mỗi câu có 4 ý a, b, c, d (Đúng 1 ý: 0.1đ; 2 ý: 0.25đ; 3 ý: 0.5đ; 4 ý: 1.0đ)"
+      },
+      {
+        "section": 3,
+        "name": "Phần III. Câu trắc nghiệm trả lời ngắn",
+        "description": "Thí sinh điền kết quả vào phiếu trả lời (0.25đ hoặc 0.5đ/câu)"
+      },
+      {
+        "section": 4,
+        "name": "Phần IV. Tự luận",
+        "description": "Giải quyết tình huống thực tiễn có thang điểm chi tiết (nếu môn thi có tự luận)"
+      }
+    ],
+    "page_number_linkage": "Mỗi slot câu hỏi trong ma trận BẮT BUỘC phải tham chiếu đến khoảng trang SGK cụ thể (page_start, page_end)."
+  },
+
+  "prompt_template": {
+    "name": "GENERATE_MATRIX_FROM_SGK",
+    "input_variables": {
+      "source_document_id": "UUID của tài liệu SGK gốc",
+      "subject": "Môn học",
+      "grade": "Khối lớp",
+      "exam_type": "Thời lượng thi: 15min, 45min, 90min, hoặc 150min",
+      "chapters_and_lessons_json": "Dữ liệu JSON các chương/bài học trích xuất từ SGK kèm số trang"
+    },
+    "prompt_text": "Dựa trên cấu trúc tài liệu SGK {subject} lớp {grade} sau đây (Tài liệu ID: {source_document_id}):\n\n--- CẤU TRÚC SGK ---\n{chapters_and_lessons_json}\n--- HẾT CẤU TRÚC SGK ---\n\nHãy thiết kế một Ma Trận Đề Kiểm Tra ({exam_type}) theo đúng chuẩn Công văn 7991/BGDĐT-GDTr với các yêu cầu kỹ thuật:\n1. Tổng điểm đề thi BẮT BUỘC là 10.0 điểm.\n2. Phân bố mức độ nhận thức: Nhận biết (~40%), Thông hiểu (~30%), Vận dụng (~20%), Vận dụng cao (~10%).\n3. Chia tối thiểu 2 phân phần (Phần I trắc nghiệm nhiều lựa chọn, Phần II đúng/sai, Phần III trả lời ngắn hoặc tự luận).\n4. Mỗi slot câu hỏi PHẢI liên kết chính xác với tên bài học, mã bài, và số trang SGK tương ứng (start_page, end_page).\n5. Thiết lập kèm theo Bản Đặc Tả (Specification) mô tả yêu cầu cần đạt (YCCĐ) tương ứng với từng câu hỏi.\n\nTrả về kết quả DUY NHẤT định dạng JSON tuân thủ schema:\n{\n  \"source_document_id\": \"{source_document_id}\",\n  \"title\": \"Ma trận đề kiểm tra định kỳ {subject} {grade}\",\n  \"exam_type\": \"{exam_type}\",\n  \"total_points\": 10.0,\n  \"total_questions\": 28,\n  \"cv7991_compliant\": true,\n  \"level_distribution\": {\n    \"NB\": 0.40,\n    \"TH\": 0.30,\n    \"VD\": 0.20,\n    \"VDC\": 0.10\n  },\n  \"sections\": [\n    {\n      \"section_number\": 1,\n      \"section_name\": \"Phần I. Câu trắc nghiệm nhiều phương án lựa chọn\",\n      \"total_questions\": 12,\n      \"score_per_question\": 0.25,\n      \"slots\": [\n        {\n          \"slot_id\": \"S1_Q1\",\n          \"topic_name\": \"Mệnh đề\",\n          \"cognitive_level\": \"NB\",\n          \"question_type\": \"TN_4_CHOICE\",\n          \"points\": 0.25,\n          \"sgk_page_start\": 5,\n          \"sgk_page_end\": 8,\n          \"learning_outcome\": \"Nhận biết được câu nào là mệnh đề, câu nào không phải mệnh đề.\"\n        }\n      ]\n    }\n  ],\n  \"specifications\": {\n    \"requirements\": {\"tong_so_tiet\": 45, \"pham_vi_kien_thuc\": \"Chương 1 và Chương 2\"},\n    \"question_specifications\": [\n      {\n        \"question_index\": 1,\n        \"topic\": \"Mệnh đề\",\n        \"cognitive_level\": \"NB\",\n        \"learning_outcome\": \"Nhận biết mệnh đề toán học\",\n        \"page_reference\": 5\n      }\n    ]\n  }\n}"
+  }
+}

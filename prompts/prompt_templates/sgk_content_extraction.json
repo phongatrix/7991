@@ -1,0 +1,38 @@
+{
+  "_comment": "CV 7991 – Prompt Template 1: SGK Content & Structure Extraction",
+  "version": "1.0.0",
+  "pipeline_stage": "ocr_content_extraction",
+  "standard": "CV 7991/BGDĐT-GDTr 2024",
+
+  "system_instruction": "Bạn là chuyên gia thẩm định và bóc tách cấu trúc sách giáo khoa Việt Nam (chương trình GDPT 2018). Nhiệm vụ của bạn là phân tích văn bản OCR từ các trang SGK, nhận diện chính xác tiêu đề bài học, các đề mục, khái niệm trọng tâm, công thức toán học/khoa học, và phần tổng kết yêu cầu cần đạt (YCCĐ).",
+
+  "extraction_rules": {
+    "header_pattern": {
+      "format": "Bài [Số]. [Tên bài học]",
+      "regex": "(?:Bài\\s+(\\d+)[\\.:\\s]+([^\n\\r]+))",
+      "example": "Bài 5. Hàm số bậc hai và đồ thị"
+    },
+    "footer_pattern": {
+      "marker": "SAU BÀI HỌC NÀY EM SẼ:",
+      "meaning": "Dấu mốc đánh dấu kết thúc bài học, chứa các yêu cầu cần đạt (YCCĐ) chính thức theo chuẩn BGDĐT"
+    },
+    "concept_markers": [
+      "Khái niệm", "Định nghĩa", "Định lí", "Tính chất", "Quy tắc", "Chú ý", "Ví dụ"
+    ],
+    "page_numbering": {
+      "requirement": "Mọi khối nội dung bóc tách bắt buộc phải gắn liền với page_number của trang SGK hiện tại."
+    }
+  },
+
+  "prompt_template": {
+    "name": "EXTRACT_SGK_PAGE_CONTENT",
+    "input_variables": {
+      "document_id": "UUID của tài liệu SGK",
+      "page_number": "Số thứ tự trang hiện tại",
+      "raw_ocr_text": "Toàn bộ chuỗi văn bản thô nhận diện từ OCR trang này",
+      "subject": "Môn học (ví dụ: math, physics)",
+      "grade": "Khối lớp (10, 11, 12)"
+    },
+    "prompt_text": "Phân tích văn bản OCR trang sách giáo khoa sau đây (Tài liệu ID: {document_id}, Trang: {page_number}, Môn: {subject}, Lớp: {grade}):\n\n--- BẮT ĐẦU VĂN BẢN OCR ---\n{raw_ocr_text}\n--- KẾT THÚC VĂN BẢN OCR ---\n\nHãy thực hiện các nhiệm vụ sau:\n1. Nhận diện xem trang này có chứa tiêu đề bài học dạng \"Bài [Số]. [Tên bài học]\" hay không (lưu vào header_info).\n2. Nhận diện xem trang này có chứa phần tổng kết cuối bài \"SAU BÀI HỌC NÀY EM SẼ:\" hay không (lưu vào footer_info).\n3. Trích xuất danh sách các mục kiến thức cốt lõi, công thức (định dạng LaTeX chuẩn), và các định nghĩa quan trọng.\n4. Trích xuất đoạn văn bản tiêu biểu (textbook_excerpt) tối đa 500 ký tự phản ánh kiến thức trọng tâm của trang để phục vụ đối soát sinh câu hỏi.\n\nTrả về kết quả DUY NHẤT dưới dạng JSON hợp lệ tuân thủ cấu trúc sau:\n{\n  \"document_id\": \"{document_id}\",\n  \"page_number\": {page_number},\n  \"header_info\": \"string hoặc null nếu không có\",\n  \"footer_info\": \"string hoặc null nếu không có\",\n  \"is_lesson_start\": boolean,\n  \"is_lesson_end\": boolean,\n  \"lesson_title\": \"string hoặc null\",\n  \"lesson_number\": integer hoặc null,\n  \"key_concepts\": [\"khái niệm 1\", \"khái niệm 2\"],\n  \"learning_outcomes\": [\"YCCĐ 1\", \"YCCĐ 2\"],\n  \"formulas\": [\"$c^2 = a^2 + b^2 - 2ab \\\\cos C$\"],\n  \"textbook_excerpt\": \"Đoạn trích dẫn tiêu biểu nhất của trang (tối đa 500 ký tự)\",\n  \"content_sections\": [\n    {\n      \"section_title\": \"1. Khái niệm hàm số bậc hai\",\n      \"text_snippet\": \"...\",\n      \"cognitive_target\": \"NB\"\n    }\n  ]\n}"
+  }
+}

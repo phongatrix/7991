@@ -1,0 +1,208 @@
+{
+  "_comment": "CV 7991 – Prompt Engineering System for SGK-to-Matrix pipeline",
+  "_version": "1.0",
+  "_standard": "CV 7991/BGDĐT-GDTr 2024",
+  "_updated": "2024-12-17",
+
+  "system_context": {
+    "role": "Bạn là chuyên gia giáo dục Việt Nam, thành thạo chương trình GDPT 2018 và chuẩn kiểm tra đánh giá theo Công văn 7991/BGDĐT-GDTr 2024.",
+    "constraints": [
+      "Câu hỏi phải bám sát nội dung SGK được cung cấp",
+      "Tuân thủ đúng mức độ nhận thức Bloom được yêu cầu",
+      "Mỗi câu hỏi phải có 4 phương án (A, B, C, D) – chỉ 1 đáp án đúng (TN)",
+      "Tự luận phải có thang điểm rõ ràng",
+      "Không đặt câu hỏi ngoài phạm vi SGK đã cung cấp",
+      "Tránh câu hỏi mơ hồ, hai đáp án đúng",
+      "TUYỆT ĐỐI KHÔNG TẠO CÂU HỎI TRÙNG LẶP: Nếu prompt liệt kê các câu hỏi đã tạo trước đó, phải tạo câu hỏi hoàn toàn khác về ý tưởng, số liệu, ngữ cảnh và cách diễn đạt",
+      "Mỗi lần gọi phải tạo ra câu hỏi MỚI với tình huống, số liệu cụ thể khác nhau, KHÔNG sao chép hoặc biến tấu nhỏ câu hỏi cũ",
+      "Ưu tiên đa dạng hóa: dùng các hiện tượng, bài toán, nhân vật, địa điểm, số liệu khác nhau"
+    ]
+  },
+
+  "prompts": {
+
+    "sgk_structure_extraction": {
+      "id": "PROMPT_001",
+      "name": "Trích xuất cấu trúc SGK",
+      "description": "Phân tích văn bản OCR từ SGK và trích xuất cấu trúc chương/bài",
+      "template": "Phân tích văn bản sau từ Sách Giáo Khoa {subject} lớp {grade}.\n\nVĂN BẢN:\n{ocr_text}\n\nHãy trích xuất và trả về JSON với cấu trúc sau:\n{\n  \"chapter_number\": <số>,\n  \"chapter_name\": \"<tên chương>\",\n  \"lesson_number\": <số>,\n  \"lesson_name\": \"<tên bài>\",\n  \"learning_objectives\": [\"<mục tiêu 1>\", \"<mục tiêu 2>\"],\n  \"key_concepts\": [\"<khái niệm 1>\", \"<khái niệm 2>\"],\n  \"content_type\": \"<body|toc|exercise|summary>\",\n  \"page_reference\": <số trang>\n}\n\nNếu không tìm thấy thông tin, để giá trị null.",
+      "variables": ["subject", "grade", "ocr_text"],
+      "output_format": "json",
+      "max_tokens": 1000,
+      "temperature": 0.1
+    },
+
+    "matrix_generation_from_sgk": {
+      "id": "PROMPT_002",
+      "name": "Sinh ma trận từ nội dung SGK",
+      "description": "Tạo ma trận đề thi CV 7991 từ cấu trúc SGK đã phân tích",
+      "template": "Bạn cần tạo MA TRẬN ĐỀ THI theo Công văn 7991/BGDĐT-GDTr 2024 cho:\n- Môn: {subject}\n- Lớp: {grade}\n- Thời gian: {duration} phút\n- Tổng câu hỏi: {total_questions} (TN: {tn_count}, TL: {tl_count})\n\nCẤU TRÚC SGK:\n{document_structure}\n\nYÊU CẦU MA TRẬN:\n1. Phân bố theo 4 mức nhận thức: NB (30%), TH (20%), VD (40%), VDC (10%)\n2. Mỗi chủ đề/bài học chiếm tỷ lệ tương xứng với số trang SGK\n3. Ghi rõ số trang SGK tham chiếu cho mỗi ô ma trận\n4. Tổng điểm = 10 (TN: 0.25đ/câu)\n\nTrả về JSON ma trận với cấu trúc:\n{\n  \"topics\": [\n    {\n      \"topic_name\": \"<tên chủ đề>\",\n      \"page_range\": [<start>, <end>],\n      \"NB\": {\"TN\": <số>, \"TL\": <số>},\n      \"TH\": {\"TN\": <số>, \"TL\": <số>},\n      \"VD\": {\"TN\": <số>, \"TL\": <số>},\n      \"VDC\": {\"TN\": <số>, \"TL\": <số>},\n      \"total\": <tổng>\n    }\n  ],\n  \"grand_total\": <tổng câu>,\n  \"score_breakdown\": {\"TN_total\": <điểm>, \"TL_total\": <điểm>}\n}",
+      "variables": ["subject", "grade", "duration", "total_questions", "tn_count", "tl_count", "document_structure"],
+      "output_format": "json",
+      "max_tokens": 2000,
+      "temperature": 0.2
+    },
+
+    "question_generation_nhan_biet": {
+      "id": "PROMPT_003_NB",
+      "name": "Sinh câu hỏi mức Nhận biết (TN)",
+      "description": "Tạo câu hỏi trắc nghiệm mức nhận biết từ trang SGK cụ thể",
+      "template": "Tạo {count} câu hỏi TRẮC NGHIỆM mức độ NHẬN BIẾT bám sát 100% ngữ nghĩa trong Sách Giáo Khoa (SGK) được cung cấp cho:\n- Bài: {lesson_name} (Bài {lesson_number})\n- Trang SGK: {page_start}–{page_end}\n- Môn: {subject} lớp {grade}\n\nNỘI DUNG SGK ĐƯỢC CUNG CẤP LÀM CĂN CỨ (Trang {page_start}–{page_end}):\n{content_excerpt}\n\nMỤC TIÊU HỌC TẬP:\n{learning_objectives}\n\nYÊU CẦU BẮT BUỘC VỀ NGỮ NGHĨA VÀ CHUẨN MỰC SGK:\n1. BÁM SÁT NGỮ NGHĨA SGK: Mọi câu hỏi, phương án đúng và phương án sai PHẢI xuất phát từ các định nghĩa, thuật ngữ khoa học, cú pháp lệnh hoặc tính chất có trong đoạn tư liệu SGK ({content_excerpt}).\n2. TUYỆT ĐỐI KHÔNG dùng phương án giả lập, placeholder, từ ngữ trừu tượng (như 'Phương án đúng', 'Khái niệm chuẩn xác', 'Quy tắc đối nghịch', 'Chỉ áp dụng trường hợp ngoại lệ'). Mỗi phương án A, B, C, D phải là một phát biểu hoàn chỉnh chứa nội dung kiến thức chuyên môn thực tế.\n3. Động từ hành động: nhận biết, liệt kê, xác định, gọi tên, phát biểu, nêu.\n4. 4 phương án A, B, C, D: chỉ đúng 1 phương án; 3 phương án còn lại là các quan niệm sai lầm phổ biến hoặc sự nhầm lẫn khái niệm có thật của học sinh.\n5. Bắt buộc có trường \"textbook_excerpt\" trích dẫn chính xác câu văn từ SGK làm bằng chứng khoa học, kèm số trang {page_start}.\n\nĐịnh dạng JSON:\n{\n  \"questions\": [\n    {\n      \"id\": \"Q{n}\",\n      \"question\": \"<nội dung câu hỏi cụ thể, rõ nghĩa>\",\n      \"options\": {\"A\": \"<nội dung phương án thực tế>\", \"B\": \"<nội dung phương án thực tế>\", \"C\": \"<nội dung phương án thực tế>\", \"D\": \"<nội dung phương án thực tế>\"},\n      \"correct_answer\": \"<A|B|C|D>\",\n      \"textbook_excerpt\": \"<đoạn trích dẫn nguyên văn từ nội dung SGK>\",\n      \"explanation\": \"Căn cứ SGK Bài {lesson_number}, trang {page_start}: <giải thích chi tiết vì sao đúng>\",\n      \"sgk_reference\": \"Bài {lesson_number}, trang {page_start}\",\n      \"page_number\": {page_start},\n      \"cognitive_level\": \"NB\",\n      \"bloom_level\": 1\n    }\n  ]\n}",
+      "variables": ["count", "lesson_name", "lesson_number", "page_start", "page_end", "subject", "grade", "content_excerpt", "learning_objectives"],
+      "output_format": "json",
+      "max_tokens": 2500,
+      "temperature": 0.7
+    },
+
+    "question_generation_thong_hieu": {
+      "id": "PROMPT_003_TH",
+      "name": "Sinh câu hỏi mức Thông hiểu (TN)",
+      "description": "Tạo câu hỏi trắc nghiệm mức thông hiểu",
+      "template": "Tạo {count} câu hỏi TRẮC NGHIỆM mức độ THÔNG HIỂU bám sát 100% ngữ nghĩa trong Sách Giáo Khoa (SGK) cho:\n- Bài: {lesson_name} (Bài {lesson_number})\n- Trang SGK: {page_start}–{page_end}\n- Môn: {subject} lớp {grade}\n\nNỘI DUNG SGK ĐƯỢC CUNG CẤP LÀM CĂN CỨ:\n{content_excerpt}\n\nKHÁI NIỆM TRỌNG TÂM: {key_concepts}\n\nYÊU CẦU BẮT BUỘC VỀ NGỮ NGHĨA VÀ CHUẨN MỰC SGK:\n1. BÁM SÁT BẢN CHẤT KIẾN THỨC SGK: Câu hỏi yêu cầu học sinh giải thích bản chất, phân biệt sự khác nhau, nhận diện ví dụ thực tế hoặc dự đoán kết quả thực thi dựa trên nguyên lí được trình bày trong SGK ({content_excerpt}).\n2. TUYỆT ĐỐI KHÔNG dùng phương án giả lập, placeholder. Các phương án A, B, C, D phải chứa các giải thích khoa học, kết quả tính toán hoặc đoạn mã cụ thể có ý nghĩa.\n3. Động từ hành động: giải thích, mô tả, so sánh, phân biệt, tóm tắt, diễn đạt, dự đoán kết quả.\n4. Bắt buộc có trường \"textbook_excerpt\" trích dẫn chính xác câu văn từ SGK làm căn cứ khoa học, kèm số trang {page_start}.\n\nĐịnh dạng JSON:\n{\n  \"questions\": [\n    {\n      \"id\": \"Q{n}\",\n      \"question\": \"<nội dung câu hỏi mức thông hiểu>\",\n      \"options\": {\"A\": \"<nội dung phương án thực tế>\", \"B\": \"<nội dung phương án thực tế>\", \"C\": \"<nội dung phương án thực tế>\", \"D\": \"<nội dung phương án thực tế>\"},\n      \"correct_answer\": \"<A|B|C|D>\",\n      \"textbook_excerpt\": \"<đoạn trích dẫn nguyên văn từ nội dung SGK>\",\n      \"explanation\": \"Căn cứ SGK Bài {lesson_number}, trang {page_start}: <giải thích chi tiết nguyên lí>\",\n      \"sgk_reference\": \"Bài {lesson_number}, trang {page_start}\",\n      \"page_number\": {page_start},\n      \"cognitive_level\": \"TH\",\n      \"bloom_level\": 2\n    }\n  ]\n}",
+      "variables": ["count", "lesson_name", "lesson_number", "page_start", "page_end", "subject", "grade", "content_excerpt", "key_concepts"],
+      "output_format": "json",
+      "max_tokens": 2500,
+      "temperature": 0.75
+    },
+
+    "question_generation_van_dung": {
+      "id": "PROMPT_003_VD",
+      "name": "Sinh câu hỏi mức Vận dụng (TN + TL)",
+      "description": "Tạo câu hỏi vận dụng – bài toán thực tế, tính toán",
+      "template": "Tạo {count} câu hỏi mức độ VẬN DỤNG bám sát ngữ nghĩa và phương pháp trong Sách Giáo Khoa cho:\n- Bài: {lesson_name} (Bài {lesson_number})\n- Dạng: {question_type} (TN hoặc TL)\n- Trang SGK: {page_start}–{page_end}\n- Môn: {subject} lớp {grade}\n\nNỘI DUNG SGK LÀM CĂN CỨ:\n{content_excerpt}\n\nCÁC VÍ DỤ VÀ BÀI TẬP MẪU TRONG SGK:\n{examples}\n\nYÊU CẦU BẮT BUỘC:\n1. BÁM SÁT PHƯƠNG PHÁP SGK: Bài toán áp dụng trực tiếp các quy tắc, thuật toán, công thức từ bài học trong SGK nhưng đặt vào tình huống thực tế mới, số liệu cụ thể mới.\n2. Các phương án trắc nghiệm hoặc lời giải tự luận phải chi tiết, chính xác về mặt toán học/thuật toán.\n3. Bắt buộc có trường \"textbook_excerpt\" nêu quy tắc/công thức gốc trong SGK và số trang tham chiếu.\n\nĐịnh dạng JSON:\n{\n  \"questions\": [\n    {\n      \"id\": \"Q{n}\",\n      \"question\": \"<đề bài cụ thể mức vận dụng>\",\n      \"options\": {\"A\": \"<>\", \"B\": \"<>\", \"C\": \"<>\", \"D\": \"<>\"},\n      \"correct_answer\": \"<A|B|C|D>\",\n      \"textbook_excerpt\": \"<công thức/quy tắc trích từ SGK>\",\n      \"explanation\": \"<các bước tính toán/lời giải chi tiết dẫn đến đáp án đúng>\",\n      \"sgk_reference\": \"Bài {lesson_number}, trang {page_start}\",\n      \"page_number\": {page_start},\n      \"cognitive_level\": \"VD\",\n      \"bloom_level\": 3\n    }\n  ]\n}",
+      "variables": ["count", "lesson_name", "lesson_number", "page_start", "page_end", "subject", "grade", "content_excerpt", "examples", "question_type"],
+      "output_format": "json",
+      "max_tokens": 3000,
+      "temperature": 0.80
+    },
+
+    "question_generation_van_dung_cao": {
+      "id": "PROMPT_003_VDC",
+      "name": "Sinh câu hỏi mức Vận dụng cao (TL)",
+      "description": "Tạo câu hỏi tự luận vận dụng cao – phân tích, tổng hợp, đánh giá",
+      "template": "Tạo {count} câu hỏi TỰ LUẬN mức độ VẬN DỤNG CAO liên hệ thực tiễn và phát triển tư duy nâng cao từ SGK:\n- Bài: {lesson_name} – liên quan đến: {related_topics}\n- Trang SGK: {page_start}–{page_end}\n- Môn: {subject} lớp {grade}\n- Điểm: {score} điểm\n\nNỘI DUNG SGK ĐÃ HỌC:\n{content_excerpt}\n\nHƯỚNG DẪN:\n- Động từ: phân tích, đánh giá, tổng hợp, tối ưu thuật toán, bài toán tham số thực tế\n- Yêu cầu học sinh phối hợp nhiều kiến thức trong SGK để giải quyết trọn vẹn tình huống mở\n- Biểu điểm chi tiết từng bước theo chuẩn CV 7991\n\nĐịnh dạng JSON:\n{\n  \"questions\": [\n    {\n      \"id\": \"TL{n}\",\n      \"question\": \"<đề bài đầy đủ>\",\n      \"score\": {score},\n      \"score_breakdown\": [{\"part\": \"a\", \"points\": 1.0, \"description\": \"...\"}],\n      \"solution\": \"<lời giải mẫu chi tiết>\",\n      \"alternative_solutions\": [\"<lời giải thay thế>\"],\n      \"textbook_excerpt\": \"<kiến thức nền tảng trích từ SGK>\",\n      \"sgk_reference\": \"Bài {lesson_number}, các trang {page_start}–{page_end}\",\n      \"cognitive_level\": \"VDC\",\n      \"bloom_level\": 4,\n      \"related_topics\": [\"{related_topics}\"]\n    }\n  ]\n}",
+      "variables": ["count", "lesson_name", "related_topics", "page_start", "page_end", "subject", "grade", "score", "content_excerpt"],
+      "output_format": "json",
+      "max_tokens": 3500,
+      "temperature": 0.85
+    },
+
+    "question_validation": {
+      "id": "PROMPT_004",
+      "name": "Validation câu hỏi",
+      "description": "Kiểm tra câu hỏi đã sinh có đạt chuẩn không",
+      "template": "Kiểm tra câu hỏi sau theo chuẩn CV 7991 và độ bám sát ngữ nghĩa SGK:\n\nCÂU HỎI:\n{question_json}\n\nNỘI DUNG SGK THAM CHIẾU:\n{sgk_reference_text}\n\nKiểm tra 5 tiêu chí:\n1. BÁM SÁT NGỮ NGHĨA SGK: Câu hỏi và các phương án có bám sát câu chữ, thuật ngữ, định nghĩa trong SGK không? Có tuyệt đối không chứa văn mẫu giả lập/placeholder không? (Yes/No + giải thích)\n2. MỨC ĐỘ: Có đúng mức nhận thức {cognitive_level} không? (Yes/No + giải thích)\n3. CHÍNH XÁC: Đáp án có đúng không? Giải thích đúng không? Có trích dẫn SGK cụ thể không? (Yes/No + sửa lại nếu sai)\n4. PHƯƠNG ÁN: Các distractor có mang nội dung thực tế hợp lý không, có phương án đúng thứ 2 không? (Yes/No)\n5. NGÔN NGỮ: Câu hỏi rõ ràng, không mơ hồ? Tiếng Việt chuẩn khoa học? (Yes/No)\n\nTrả về JSON:\n{\n  \"is_valid\": <true|false>,\n  \"overall_score\": <0-100>,\n  \"checks\": {\n    \"sgk_aligned\": {\"pass\": <bool>, \"comment\": \"<>\"},\n    \"cognitive_level\": {\"pass\": <bool>, \"comment\": \"<>\"},\n    \"accuracy\": {\"pass\": <bool>, \"comment\": \"<>\", \"correction\": \"<nếu có>\"},\n    \"distractors\": {\"pass\": <bool>, \"comment\": \"<>\"},\n    \"language\": {\"pass\": <bool>, \"comment\": \"<>\"}\n  },\n  \"recommendation\": \"<APPROVE|REVISE|REJECT>\",\n  \"revision_notes\": \"<hướng dẫn chỉnh sửa nếu cần>\"\n}",
+      "variables": ["question_json", "sgk_reference_text", "cognitive_level"],
+      "output_format": "json",
+      "max_tokens": 1500,
+      "temperature": 0.1
+    },
+
+    "exam_assembly": {
+      "id": "PROMPT_005",
+      "name": "Lắp ráp đề thi hoàn chỉnh",
+      "description": "Tổng hợp câu hỏi thành đề thi theo đúng format CV 7991",
+      "template": "Lắp ráp ĐỀ THI HOÀN CHỈNH theo chuẩn CV 7991 từ các câu hỏi sau:\n\nTHÔNG TIN ĐỀ THI:\n- Tiêu đề: {exam_title}\n- Môn học: {subject} – Lớp {grade}\n- Thời gian: {duration} phút\n- Trường: {school_name}\n- Năm học: {academic_year}\n- Mã đề: {exam_code}\n\nCÁC CÂU HỎI (đã được xác nhận):\nTRẮC NGHIỆM:\n{tn_questions}\n\nTỰ LUẬN:\n{tl_questions}\n\nYÊU CẦU:\n1. Sắp xếp câu TN theo thứ tự tăng dần độ khó (NB → TH → VD → VDC)\n2. Đánh số câu liên tục (Câu 1, Câu 2, ...)\n3. Hoán vị đáp án ngẫu nhiên (nếu mã đề > 1)\n4. Format đúng theo mẫu bộ giáo dục\n5. Kèm đáp án và biểu điểm riêng\n\nTrả về:\n{\n  \"exam_paper\": \"<nội dung đề thi đầy đủ dạng text>\",\n  \"answer_key\": {\"1\": \"C\", \"2\": \"A\", ...},\n  \"scoring_guide\": [{\"question\": \"Câu 29\", \"points\": 1.0, \"detail\": \"...\"}],\n  \"metadata\": {\"total_tn\": <số>, \"total_tl\": <số>, \"total_score\": 10}\n}",
+      "variables": ["exam_title", "subject", "grade", "duration", "school_name", "academic_year", "exam_code", "tn_questions", "tl_questions"],
+      "output_format": "json",
+      "max_tokens": 5000,
+      "temperature": 0.3
+    },
+
+    "ocr_correction": {
+      "id": "PROMPT_006",
+      "name": "Sửa lỗi OCR văn bản SGK",
+      "description": "Sửa lỗi OCR cho văn bản toán học tiếng Việt",
+      "template": "Văn bản sau được OCR từ Sách Giáo Khoa {subject} lớp {grade}. Hãy sửa lỗi OCR nhưng GIỮ NGUYÊN nội dung gốc:\n\nVĂN BẢN OCR:\n{raw_ocr_text}\n\nCác lỗi OCR thường gặp cần sửa:\n- Dấu tiếng Việt bị sai: 'a' thành 'â', 'ă', 'à', 'á'...\n- Ký hiệu toán học bị sai: 'Σ', 'π', '≤', '≥', '∈', '⊂'\n- Số bị nhầm: '0' vs 'O', '1' vs 'l'\n- Xuống dòng bị sai\n- Công thức LaTeX bị vỡ\n\nQuy tắc:\n- Chỉ sửa lỗi OCR, KHÔNG thêm/bớt nội dung\n- Giữ nguyên số trang, tiêu đề, cấu trúc\n- Đánh dấu [?] nếu không chắc chắn cách sửa\n\nTrả về JSON:\n{\n  \"corrected_text\": \"<văn bản đã sửa>\",\n  \"corrections_made\": [{\"original\": \"<>\", \"corrected\": \"<>\", \"reason\": \"<>\"}],\n  \"confidence\": <0.0-1.0>,\n  \"uncertain_parts\": [\"<đoạn không chắc>\"]\n}",
+      "variables": ["subject", "grade", "raw_ocr_text"],
+      "output_format": "json",
+      "max_tokens": 2000,
+      "temperature": 0.1
+    }
+  },
+
+  "provider_configs": {
+    "gemini": {
+      "model": "gemini-1.5-pro",
+      "api_key_env": "GEMINI_API_KEY",
+      "priority": 1,
+      "rate_limit": { "requests_per_minute": 60, "tokens_per_minute": 1000000 },
+      "best_for": ["structure_extraction", "matrix_generation", "question_generation"],
+      "system_instruction_support": true
+    },
+    "openai": {
+      "model": "gpt-4o",
+      "api_key_env": "OPENAI_API_KEY",
+      "priority": 2,
+      "rate_limit": { "requests_per_minute": 60, "tokens_per_minute": 800000 },
+      "best_for": ["question_validation", "exam_assembly"],
+      "system_instruction_support": true
+    },
+    "claude": {
+      "model": "claude-3-5-sonnet-20241022",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "priority": 3,
+      "rate_limit": { "requests_per_minute": 50, "tokens_per_minute": 400000 },
+      "best_for": ["ocr_correction", "complex_math"],
+      "system_instruction_support": true
+    }
+  },
+
+  "validation_rules": {
+    "question_rules": [
+      { "rule": "MIN_QUESTION_LENGTH", "value": 20, "unit": "characters" },
+      { "rule": "MAX_QUESTION_LENGTH", "value": 500, "unit": "characters" },
+      { "rule": "EXACTLY_4_OPTIONS",   "value": 4,   "unit": "count" },
+      { "rule": "ONE_CORRECT_ANSWER",  "value": 1,   "unit": "count" },
+      { "rule": "DISTRACTOR_MIN_LEN",  "value": 3,   "unit": "characters" },
+      { "rule": "NO_ALL_OF_ABOVE",     "value": true, "description": "Không dùng 'Tất cả đều đúng'" },
+      { "rule": "SGK_ALIGNED",         "value": true, "description": "Phải liên kết trang SGK" }
+    ],
+    "matrix_rules": [
+      { "rule": "TOTAL_SCORE",         "value": 10,    "tolerance": 0.25 },
+      { "rule": "NB_PERCENT_MIN",      "value": 25,    "unit": "percent" },
+      { "rule": "NB_PERCENT_MAX",      "value": 45,    "unit": "percent" },
+      { "rule": "TH_PERCENT_MIN",      "value": 15,    "unit": "percent" },
+      { "rule": "VD_VDC_PERCENT_MIN",  "value": 30,    "unit": "percent" },
+      { "rule": "MIN_TOPICS",          "value": 3,     "unit": "count" },
+      { "rule": "TN_SCORE_PER_Q",      "value": 0.25,  "unit": "points" }
+    ],
+    "sgk_alignment_rules": [
+      { "rule": "PAGE_REF_REQUIRED",   "value": true,  "description": "Mỗi câu phải có tham chiếu trang SGK" },
+      { "rule": "LESSON_REF_REQUIRED", "value": true,  "description": "Mỗi câu phải có tham chiếu bài học" },
+      { "rule": "CONTENT_COVERAGE",    "value": 0.8,   "description": "≥80% câu hỏi phải bám sát nội dung SGK" }
+    ]
+  },
+
+  "subject_configs": {
+    "math": {
+      "label": "Toán học",
+      "ocr_special_chars": ["∈", "⊂", "∩", "∪", "∅", "∀", "∃", "≤", "≥", "±", "√", "∞", "π", "Σ", "∫"],
+      "level_distribution": { "NB": 0.30, "TH": 0.20, "VD": 0.35, "VDC": 0.15 },
+      "tn_ratio": 0.70,
+      "tl_types": ["Chứng minh", "Giải bài toán", "Tìm điều kiện", "Biện luận"]
+    },
+    "literature": {
+      "label": "Ngữ văn",
+      "level_distribution": { "NB": 0.35, "TH": 0.30, "VD": 0.25, "VDC": 0.10 },
+      "tn_ratio": 0.40,
+      "tl_types": ["Đọc hiểu", "Nghị luận văn học", "Nghị luận xã hội"]
+    },
+    "physics": {
+      "label": "Vật lý",
+      "ocr_special_chars": ["Δ", "λ", "μ", "Ω", "°", "→"],
+      "level_distribution": { "NB": 0.25, "TH": 0.25, "VD": 0.35, "VDC": 0.15 },
+      "tn_ratio": 0.75
+    },
+    "chemistry": {
+      "label": "Hóa học",
+      "level_distribution": { "NB": 0.30, "TH": 0.25, "VD": 0.30, "VDC": 0.15 },
+      "tn_ratio": 0.70
+    },
+    "english": {
+      "label": "Tiếng Anh",
+      "level_distribution": { "NB": 0.35, "TH": 0.35, "VD": 0.25, "VDC": 0.05 },
+      "tn_ratio": 0.80
+    }
+  }
+}

@@ -1,0 +1,229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CV 7991 Validation & Data Integrity Schemas",
+  "description": "JSON Schemas and integrity constraint specifications for CV 7991 Exam Generation System",
+  "version": "1.0.0",
+  "definitions": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "cognitive_level": {
+      "type": "string",
+      "enum": ["NB", "TH", "VD", "VDC"]
+    },
+    "question_type": {
+      "type": "string",
+      "enum": ["TN_4_CHOICE", "TN_TRUE_FALSE", "TN_SHORT_ANSWER", "ESSAY"]
+    },
+    "ocr_status": {
+      "type": "string",
+      "enum": ["pending", "processing", "done", "failed"]
+    }
+  },
+
+  "schemas": {
+    "exam_matrices": {
+      "$id": "https://cv7991.edu.vn/schemas/exam_matrices.json",
+      "type": "object",
+      "required": ["source_document_id", "sections", "level_distribution", "total_points", "cv7991_compliant"],
+      "properties": {
+        "source_document_id": { "$ref": "#/definitions/uuid" },
+        "title": { "type": "string", "minLength": 5, "maxLength": 300 },
+        "exam_type": { "type": "string", "enum": ["15min", "45min", "90min", "150min", "custom"] },
+        "sections": {
+          "type": "array",
+          "minItems": 2,
+          "description": "CV 7991 sections: Part I (Multiple choice), Part II (True/False), Part III (Short answer), Part IV (Essay)",
+          "items": {
+            "type": "object",
+            "required": ["section_number", "section_name", "total_questions"],
+            "properties": {
+              "section_number": { "type": "integer", "minimum": 1, "maximum": 4 },
+              "section_name": { "type": "string" },
+              "total_questions": { "type": "integer", "minimum": 1 },
+              "score_per_question": { "type": "number", "minimum": 0.1 },
+              "slots": { "type": "array" }
+            }
+          }
+        },
+        "question_types": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/question_type" }
+        },
+        "level_distribution": {
+          "type": "object",
+          "required": ["NB", "TH", "VD", "VDC"],
+          "properties": {
+            "NB":  { "type": "number", "minimum": 0.20, "maximum": 0.50, "description": "Nhận biết ~40%" },
+            "TH":  { "type": "number", "minimum": 0.15, "maximum": 0.40, "description": "Thông hiểu ~30%" },
+            "VD":  { "type": "number", "minimum": 0.10, "maximum": 0.30, "description": "Vận dụng ~20%" },
+            "VDC": { "type": "number", "minimum": 0.05, "maximum": 0.20, "description": "Vận dụng cao ~10%" }
+          }
+        },
+        "total_points": {
+          "type": "number",
+          "enum": [10.0, 10],
+          "description": "CV 7991 Constraint: Total score must be exactly 10.0 points"
+        },
+        "total_questions": { "type": "integer", "minimum": 5, "maximum": 100 },
+        "cv7991_compliant": { "type": "boolean", "const": true }
+      }
+    },
+
+    "questions": {
+      "$id": "https://cv7991.edu.vn/schemas/questions.json",
+      "type": "object",
+      "required": ["document_id", "page_number", "sgk_page_reference", "content", "cognitive_level", "question_type", "correct_answer"],
+      "properties": {
+        "document_id": {
+          "$ref": "#/definitions/uuid",
+          "description": "Foreign key to documents table (Required)"
+        },
+        "page_number": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Physical page number in document_pages table (Required)"
+        },
+        "sgk_page_reference": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Textbook page printed number (Required)"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Question stem, may contain balanced LaTeX math syntax"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["key", "text"],
+            "properties": {
+              "key": { "type": "string" },
+              "text": { "type": "string" }
+            }
+          }
+        },
+        "correct_answer": { "type": "string", "minLength": 1 },
+        "explanation": { "type": "string" },
+        "cognitive_level": { "$ref": "#/definitions/cognitive_level" },
+        "question_type": { "$ref": "#/definitions/question_type" },
+        "points": { "type": "number", "minimum": 0.1, "maximum": 5.0 },
+        "textbook_excerpt": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Preserved OCR content snippet, must be <= 500 characters"
+        },
+        "content_similarity": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 0.85,
+          "description": "Max similarity score allowed against existing questions to prevent duplicates"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "lesson_name": { "type": "string" },
+            "chapter_name": { "type": "string" },
+            "key_concepts": { "type": "array", "items": { "type": "string" } },
+            "ai_generated": { "type": "boolean" },
+            "ai_provider": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "specifications": {
+      "$id": "https://cv7991.edu.vn/schemas/specifications.json",
+      "type": "object",
+      "required": ["matrix_id", "requirements", "question_specifications", "sgk_alignment"],
+      "properties": {
+        "matrix_id": { "$ref": "#/definitions/uuid" },
+        "title": { "type": "string" },
+        "requirements": {
+          "type": "object",
+          "description": "Yêu cầu cần đạt (YCCĐ) theo chương trình GDPT 2018"
+        },
+        "question_specifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["topic", "cognitive_level", "question_index", "learning_outcome"],
+            "properties": {
+              "topic": { "type": "string" },
+              "cognitive_level": { "$ref": "#/definitions/cognitive_level" },
+              "question_index": { "type": "integer" },
+              "learning_outcome": { "type": "string" }
+            }
+          }
+        },
+        "sgk_alignment": {
+          "type": "object",
+          "description": "Mapping from learning outcomes to SGK chapters and pages"
+        }
+      }
+    },
+
+    "documents": {
+      "$id": "https://cv7991.edu.vn/schemas/documents.json",
+      "type": "object",
+      "required": ["original_filename", "file_path", "file_size", "ocr_status"],
+      "properties": {
+        "original_filename": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "file_path": { "type": "string", "minLength": 1 },
+        "file_size": { "type": "integer", "minimum": 1 },
+        "ocr_status": { "$ref": "#/definitions/ocr_status" },
+        "processed_content": { "type": "string" },
+        "toc_data": { "type": "object" },
+        "total_pages": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "document_pages": {
+      "$id": "https://cv7991.edu.vn/schemas/document_pages.json",
+      "type": "object",
+      "required": ["document_id", "page_number"],
+      "properties": {
+        "document_id": { "$ref": "#/definitions/uuid" },
+        "page_number": { "type": "integer", "minimum": 1 },
+        "ocr_text": { "type": "string" },
+        "header_info": { "type": "string", "maxLength": 500, "description": "Format: Bài Số. Tên bài học" },
+        "footer_info": { "type": "string", "maxLength": 500, "description": "Format: SAU BÀI HỌC NÀY EM SẼ: ..." },
+        "content_sections": { "type": "array" },
+        "confidence_score": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    }
+  },
+
+  "validation_rules_config": {
+    "rule_1_document_ownership": {
+      "description": "document_id must exist in documents table and be owned by the requesting user",
+      "enforcement": "application_middleware_and_db_fk",
+      "error_code": "DOCUMENT_NOT_FOUND_OR_FORBIDDEN"
+    },
+    "rule_2_page_existence": {
+      "description": "page_number in questions must exist in document_pages for the given document_id",
+      "enforcement": "db_composite_foreign_key: (document_id, page_number) -> document_pages(document_id, page_number)",
+      "error_code": "PAGE_NOT_FOUND_IN_DOCUMENT"
+    },
+    "rule_3_textbook_excerpt_limit": {
+      "description": "textbook_excerpt length must not exceed 500 characters",
+      "enforcement": "check_constraint: char_length(textbook_excerpt) <= 500",
+      "max_length": 500,
+      "error_code": "EXCERPT_EXCEEDS_500_CHARS"
+    },
+    "rule_4_duplicate_question_avoidance": {
+      "description": "content_similarity threshold check to avoid generating identical/duplicate questions from the same textbook page",
+      "enforcement": "trigram_similarity_threshold",
+      "max_similarity_allowed": 0.85,
+      "error_code": "DUPLICATE_QUESTION_DETECTED"
+    },
+    "rule_5_cv7991_score_and_sections": {
+      "description": "Exam total points must equal exactly 10.0 and contain at least 2 distinct question sections",
+      "enforcement": "check_constraint: total_points = 10.00 AND jsonb_array_length(sections) >= 2",
+      "error_code": "CV7991_STRUCTURE_INVALID"
+    }
+  }
+}

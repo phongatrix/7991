@@ -1,0 +1,22 @@
+{
+  "name": "fengs-exam-cv7991",
+  "version": "1.0.0",
+  "description": "FENG's EXAM – Hệ thống tạo Ma trận, Bản đặc tả và Đề thi chuẩn Công văn 7991/BGDĐT-GDTr",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "test": "npm test --prefix backend",
+    "setup": "npm install --prefix backend"
+  },
+  "keywords": [
+    "cv7991",
+    "bgddt",
+    "exam-generator",
+    "matrix",
+    "specification",
+    "tin-hoc"
+  ],
+  "author": "FENG",
+  "license": "MIT"
+}
