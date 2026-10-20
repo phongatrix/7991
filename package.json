@@ -1,5 +1,5 @@
 {
-  "name": "fengs-exam-cv7991",
+  "name": "fengcv7991",
   "version": "1.0.0",
   "description": "FENG's EXAM – Hệ thống tạo Ma trận, Bản đặc tả và Đề thi chuẩn Công văn 7991/BGDĐT-GDTr",
   "main": "backend/server.js",
